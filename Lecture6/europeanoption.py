@@ -22,37 +22,56 @@ class EuropeanOption:
         self.d1 = (np.log(self.S / self.K) + (0.5 * self.sig ** 2) * self.T) / self.tmp
         self.d2 = self.d1 - self.tmp
 
-    def get_option_price(self):
+    def get_option_price(self, sig=None, iv=None):
+        if iv:
+            if self.call_or_put == 'C':
+                return self.calculate_call_price(sig)
+            else:
+                return self.calculate_put_price(sig)
+
         if self.call_or_put == 'C':
-            self.price = self.calculate_call_price()
+            self.price = self.calculate_call_price(sig)
             self.delta = self.calculate_call_delta()
         else:
-            self.price = self.calculate_put_price()
+            self.price = self.calculate_put_price(sig)
             self.delta = self.calculate_put_delta()
+
 
     def calculate_iv(self, option_price):
         # TODO: calculate option implied vol using bisection method
         # while loop is good enough for a single option
+        f = lambda sig: (self.get_option_price(sig, iv=True) - option_price)
+
         low = 0
         high = 10
-        while mid - low > 1e-5:
-            pass
-        iv = 0
-        # TODO: use for instead of while for vectorzation
-        # 2^10 = 1024; 14
-        # 10. / 1000 = 0.001
-        return iv
+        for _ in range(100):
+            sig = (low + high) / 2
+            if f(sig) == 0 or (high - low) / 2 < 1e-5:
+                return sig
+            if np.sign(f(sig)) == np.sign((f(low))):
+                low = sig
+            else:
+                high = sig
+        return (low + high) / 2
 
-    def calculate_call_price(self):
-        tmp = self.sig * np.sqrt(self.T)
-        d1 = (np.log(self.S / self.K) + (0.5 * self.sig ** 2) * self.T) / tmp
+        # iv = 0
+        # # TODO: use for instead of while for vectorzation
+        # # 2^10 = 1024; 14
+        # # 10. / 1000 = 0.001
+        # return iv
+
+    def calculate_call_price(self, sig=None):
+        sig = sig if sig is not None else self.sig
+        tmp = sig * np.sqrt(self.T)
+        d1 = (np.log(self.S / self.K) + (0.5 * sig ** 2) * self.T) / tmp
         d2 = d1 - tmp
         price = self.S * self.N(d1) - self.K * np.exp(-self.r * self.T) * self.N(d2)
         return price
 
-    def calculate_put_price(self):
-        tmp = self.sig * np.sqrt(self.T)
-        d1 = (np.log(self.S / self.K) + (0.5 * self.sig ** 2) * self.T) / tmp
+    def calculate_put_price(self, sig=None):
+        sig = sig if sig is not None else self.sig
+        tmp = sig * np.sqrt(self.T)
+        d1 = (np.log(self.S / self.K) + (0.5 * sig ** 2) * self.T) / tmp
         d2 = d1 - tmp
         price = self.K * np.exp(-self.r * self.T) * (1 - self.N(d2)) - self.S * (1 - self.N(d1))
         return price
